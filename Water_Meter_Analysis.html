@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Water meter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#e9f1f3;--panel:#ffffff;--ink:#10303a;--mute:#5a7680;--line:#d0e0e5;--accent:#1677a8;--soft:#d9ecf4;--red:#c8372d;--dial:#0f252c;--dialtx:#f1f7f8;--err:#b3261e;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1a1f;--panel:#12242a;--ink:#dcebef;--mute:#8aa5ad;--line:#22393f;--accent:#5bb8e3;--soft:#163846;--red:#ff6b5e;--dial:#061115;--dialtx:#e6f1f3;--err:#ff8a80}}
+:root[data-theme="dark"]{--bg:#0c1a1f;--panel:#12242a;--ink:#dcebef;--mute:#8aa5ad;--line:#22393f;--accent:#5bb8e3;--soft:#163846;--red:#ff6b5e;--dial:#061115;--dialtx:#e6f1f3;--err:#ff8a80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Manrope,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:0}
+h2{font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em}
+h3{font-size:15px;font-weight:700;margin:0 0 8px}
+.mute{color:var(--mute)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+/* login */
+#login{max-width:440px;margin:8vh auto 0}
+#login h1{margin-bottom:4px}
+#login p{margin:0 0 18px}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+.field input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}
+.primary{width:100%;padding:11px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:700}
+.primary:disabled{opacity:.6;cursor:progress}
+details.adv{margin:14px 0 0;font-size:14px}
+details.adv summary{cursor:pointer;color:var(--mute)}
+details.adv .field input{font-size:13px}
+#status{margin-top:14px;font-size:14px;min-height:1.5em}
+#status.err{color:var(--err)}
+.bar{height:4px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:8px;display:none}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.help{font-size:13px;margin-top:14px;display:none}
+.help code{display:block;white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--line);padding:8px;border-radius:8px;margin-top:6px;font-size:12px}
+/* app */
+#app{display:none}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+.top .acts{display:flex;gap:8px;flex-wrap:wrap}
+.ghost{padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-size:14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.tabs button{padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:14px}
+.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.hero{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;margin-bottom:18px}
+.dial{background:var(--dial);color:var(--dialtx);border-radius:18px;padding:18px 20px 14px;display:inline-block}
+.digits{display:flex;gap:4px;align-items:flex-end}
+.digits b{display:inline-flex;align-items:center;justify-content:center;width:34px;height:48px;border-radius:5px;background:#000;color:#fff;font-size:30px;font-weight:700;box-shadow:inset 0 -10px 14px rgba(255,255,255,.06),inset 0 10px 14px rgba(255,255,255,.04)}
+.digits b.r{background:#9d1d14;color:#fff}
+.digits .sep{width:6px}
+.dial small{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;opacity:.75}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 22px}
+.kpi span{display:block;font-size:13px;color:var(--mute)}
+.kpi strong{font-size:20px;font-weight:700}
+.kpi em{font-style:normal;font-size:13px;color:var(--mute);margin-left:4px}
+details.acct{margin-bottom:22px}
+details.acct>summary{cursor:pointer;font-weight:700;font-size:16px;padding:4px 0}
+.acct-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-top:12px}
+.acct-grid .blk{min-width:0}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:0;font-size:14px}
+dl.kv dt{color:var(--mute)}
+dl.kv dd{margin:0;word-break:break-word}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;font-size:13px;width:100%}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:600}
+/* sections */
+.res{margin-bottom:22px}
+.res-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.res-head p{margin:0;font-size:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:5px 11px;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--soft);font-weight:700}
+.res-body{display:grid;grid-template-columns:270px minmax(0,1fr);gap:18px}
+.picker{border-right:1px solid var(--line);padding-right:16px;min-width:0}
+.presets,.dows{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.presets button,.dows button{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 8px;font-size:12.5px}
+.dows{margin-bottom:10px}
+.dows::before{content:"Last 8 of";font-size:12.5px;color:var(--mute);align-self:center;margin-right:2px}
+.list{max-height:520px;overflow-y:auto;font-size:13.5px;margin-right:-8px;padding-right:8px}
+.pi{display:grid;grid-template-columns:auto 12px 1fr auto;gap:8px;align-items:center;padding:4px 2px;border-radius:6px;cursor:pointer}
+.pi:hover{background:var(--soft)}
+.pi .sw{width:12px;height:12px;border-radius:3px;background:var(--c);opacity:.25}
+.pi input:checked~.sw{opacity:1}
+.pi .pt{color:var(--mute);font-size:12.5px}
+.pi.part .pl::after{content:" (partial)";color:var(--mute);font-size:12px}
+.charts{display:grid;gap:18px;min-width:0}
+figure{margin:0}
+figcaption{font-size:13.5px;font-weight:600;margin-bottom:6px}
+.cv{position:relative;height:300px}
+.empty{padding:30px 0;text-align:center;color:var(--mute)}
+details.dbg{margin-top:26px;font-size:13px}
+details.dbg summary{cursor:pointer;color:var(--mute)}
+details.dbg pre{max-height:300px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap;word-break:break-all}
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr}
+  .res-body{grid-template-columns:1fr}
+  .picker{border-right:0;padding-right:0;border-bottom:1px solid var(--line);padding-bottom:12px}
+  .list{max-height:220px}
+  .digits b{width:28px;height:40px;font-size:24px}
+  .cv{height:260px}
+}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<section id="login" class="panel">
+  <h1>Water meter</h1>
+  <p class="mute">Sign in with your Read Your Meter Pro account. Credentials go only to the meter API.</p>
+  <form id="lf" autocomplete="on">
+    <label class="field"><span>Email</span><input id="email" type="email" autocomplete="username" required></label>
+    <label class="field"><span>Password</span><input id="pw" type="password" autocomplete="current-password"></label>
+    <button class="primary" id="go" type="submit">Load my data</button>
+    <details class="adv">
+      <summary>Advanced</summary>
+      <label class="field"><span>Access token (skips sign-in if filled)</span><input id="tok" type="text" spellcheck="false"></label>
+      <label class="field"><span>API base URL</span><input id="base" type="text" value="https://eu-customerportal-api.harmonyencoremdm.com" spellcheck="false"></label>
+      <label class="field"><span>App ID</span><input id="appid" type="text" value="78FE99BC-5D35-4AC8-A15A-85E9D3C90ED0" spellcheck="false"></label>
+      <label class="field"><span>Device ID</span><input id="dev" type="text" value="193097482932028589291349292975147444734" spellcheck="false"></label>
+    </details>
+  </form>
+  <div id="status" role="status"></div>
+  <div class="bar" id="bar"><i></i></div>
+  <div class="help" id="help">
+    The browser blocked the request because the API only accepts calls from its own website (CORS). Open this file in a Chrome window started with web security off, using a throwaway profile:
+    <code>&amp; "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" --disable-web-security --user-data-dir="$env:TEMP\chrome-cors" "file:///$((Resolve-Path .\water_meter.html) -replace '\\','/')"</code>
+    Run it from the folder that holds this file. Close that window when done; don't browse other sites in it.
+  </div>
+</section>
+
+<main id="app">
+  <div class="top">
+    <h1>Water meter</h1>
+    <div class="acts">
+      <button class="ghost" id="reload">Reload data</button>
+      <button class="ghost" id="dl">Download raw data</button>
+      <button class="ghost" id="out">Sign out</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabs" role="tablist"></div>
+
+  <div class="hero">
+    <div class="dial" aria-label="Total since reporting began">
+      <div class="digits" id="digits"></div>
+      <small><span>m³</span><span>liters</span></small>
+    </div>
+    <div class="kpis" id="kpis"></div>
+  </div>
+
+  <details class="acct panel" open>
+    <summary>Account details</summary>
+    <div class="acct-grid" id="acct"></div>
+  </details>
+
+  <div id="sections"></div>
+
+  <details class="dbg">
+    <summary>API responses (first sample per endpoint)</summary>
+    <div id="dbg"></div>
+  </details>
+</main>
+
+</div>
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const PAL=['#1677a8','#e0782f','#2a9d6f','#c2416b','#7b5cc4','#b38b00','#22a7b8','#8c5a3a','#5f8a1c','#d34a3a','#3d5a99','#a14fa8'];
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const parseYmd=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c||1)};
+const sow=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());return addDays(x,-x.getDay())}; // Israel: week starts Sunday
+const midnight=()=>{const d=new Date();d.setHours(0,0,0,0);return d};
+const fmt=(v,dp=3)=>v==null||isNaN(v)?'—':(+v).toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
+const fmtU=v=>v==null?'—':`${fmt(v)} m³ (${Math.round(v*1000).toLocaleString('en-US')} L)`;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dShort=d=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()).slice(2)}`;
+const sum=a=>{let s=0,n=0;for(const v of a)if(v!=null){s+=v;n++}return n?s:null};
+const cumulate=a=>{let s=0;return a.map(v=>v==null?null:+(s+=v).toFixed(5))};
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const store={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};
+
+const S={base:'',appId:'',deviceId:'',token:''};
+let RAW={}, SAMPLE={}, METERS=[], CUR=0, CHARTS={};
+
+/* ---------- API ---------- */
+async function api(path,tag,opts={}){
+  let r;
+  try{
+    r=await fetch(S.base.replace(/\/$/,'')+path,{method:opts.method||'GET',
+      headers:Object.assign({'x-app-id':S.appId},S.token?{'X-Access-Token':S.token}:{},opts.body?{'Content-Type':'application/json'}:{}),
+      body:opts.body?JSON.stringify(opts.body):undefined});
+  }catch(e){const err=new Error('Request blocked by the browser (CORS) or no network.');err.fatal=true;err.cors=true;throw err}
+  const txt=await r.text(); let j; try{j=JSON.parse(txt)}catch{j=txt}
+  if(tag&&!(tag in SAMPLE)) SAMPLE[tag]={path,status:r.status,body:j};
+  if(!r.ok){const err=new Error(`${r.status} on ${path}${typeof j==='object'&&j&&(j.message||j.error)?': '+(j.message||j.error):''}`);err.status=r.status;if(r.status===401)err.fatal=true;throw err}
+  return j;
+}
+async function pool(items,n,fn){let i=0;await Promise.all(Array.from({length:Math.min(n,items.length)},async()=>{while(i<items.length){const it=items[i++];await fn(it)}}))}
+
+/* ---------- tolerant response parsing ---------- */
+function parseTs(v){
+  if(typeof v==='number'){if(v>1e11){const d=new Date(v);return{lit:d,abs:d,t:true}}if(v>1e9&&v<1e11){const d=new Date(v*1000);return{lit:d,abs:d,t:true}}return null}
+  if(typeof v!=='string')return null;
+  let m=v.trim().match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?(?:[T ](\d{1,2})(?::(\d{2}))?(?::\d{2}(?:\.\d+)?)?)?\s*(Z|[+-]\d{2}:?\d{2})?$/);
+  if(m){const lit=new Date(+m[1],+m[2]-1,m[3]?+m[3]:1,m[4]?+m[4]:0);const abs=(m[6]&&m[4]!=null)?new Date(v):lit;return{lit,abs,t:m[4]!=null}}
+  m=v.trim().match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if(m){const d=new Date(+m[3],+m[2]-1,+m[1],m[4]?+m[4]:0);return{lit:d,abs:d,t:m[4]!=null}}
+  return null;
+}
+const isNum=x=>(typeof x==='number'&&isFinite(x))||(typeof x==='string'&&/^-?\d+(\.\d+)?$/.test(x.trim()));
+const DK=['date','datetime','readdate','readingdate','readdatetime','consumptiondate','timestamp','time','ts','day','period','fromdate','startdate','start','from','x','dt','d'];
+const VK=['consumption','cons','usage','value','amount','quantity','qty','volume','total','sum','y','v'];
+function pickDate(o){
+  const ks=Object.keys(o);
+  for(const p of DK){const k=ks.find(k=>k.toLowerCase()===p);if(k){const r=parseTs(o[k]);if(r)return r}}
+  for(const k of ks)if(/date|time/i.test(k)){const r=parseTs(o[k]);if(r)return r}
+  for(const k of ks)if(typeof o[k]==='string'){const r=parseTs(o[k]);if(r)return r}
+  return null;
+}
+function pickVal(o){
+  const ks=Object.keys(o);
+  for(const p of VK){const k=ks.find(k=>k.toLowerCase()===p);if(k&&isNum(o[k]))return{v:+o[k],reg:false}}
+  for(const k of ks)if(/cons|usage|amount|volume|value|quantity/i.test(k)&&!/date|time|id$|count$/i.test(k)&&isNum(o[k]))return{v:+o[k],reg:false}
+  for(const k of ks)if(/read/i.test(k)&&!/date|time/i.test(k)&&isNum(o[k]))return{v:+o[k],reg:true}; // meter register -> diff later
+  return null;
+}
+function extract(j){
+  const out=[];
+  (function walk(n,dep){
+    if(n==null||dep>9)return;
+    if(Array.isArray(n)){n.forEach(x=>walk(x,dep+1));return}
+    if(typeof n!=='object')return;
+    const ks=Object.keys(n);
+    const r=pickDate(n);
+    if(r){const pv=pickVal(n);if(pv){
+      const hk=ks.find(k=>/^(hour|hr)$/i.test(k)&&isNum(n[k]));
+      if(hk&&!r.t){r.lit=new Date(r.lit);r.lit.setHours(+n[hk]);r.abs=r.lit;r.t=true}
+      out.push({...r,...pv});return}}
+    if(ks.length&&ks.every(k=>parseTs(k))){ks.forEach(k=>{if(isNum(n[k])){const r=parseTs(k);out.push({...r,v:+n[k],reg:false})}else walk(n[k],dep+1)});return}
+    ks.forEach(k=>walk(n[k],dep+1));
+  })(j,0);
+  if(out.length&&out.every(r=>r.reg)){ // register readings -> consumption deltas
+    out.sort((a,b)=>a.abs-b.abs);
+    return out.slice(1).map((r,i)=>({...r,v:Math.max(0,r.v-out[i].v),reg:false}));
+  }
+  return out.filter(r=>!r.reg);
+}
+function findArray(j){
+  if(Array.isArray(j))return j;
+  if(j&&typeof j==='object'){for(const k of Object.keys(j))if(Array.isArray(j[k])&&j[k].length&&typeof j[k][0]==='object')return j[k];
+    for(const k of Object.keys(j)){const a=findArray(j[k]);if(a)return a}}
+  return null;
+}
+const MID=/^(metercount|meter_count|meterid|meter_id|meternumber|meterno|meterserial|serialnumber|meter|id)$/i;
+function meterId(o){const order=['meterCount','meter_count','meterId','meterNumber','meterNo','serialNumber','meterSerial','meter','id'];
+  for(const k of order){const kk=Object.keys(o).find(x=>x.toLowerCase()===k.toLowerCase());if(kk&&(typeof o[kk]==='string'||typeof o[kk]==='number'))return String(o[kk])}return null}
+function meterName(o,id){
+  const pick=re=>{const k=Object.keys(o).find(k=>re.test(k)&&typeof o[k]!=='object'&&o[k]!==''&&o[k]!=null);return k?String(o[k]):''};
+  const num=pick(/^(meternumber|meterno|serialnumber|meterserial)$/i)||id;
+  const addr=pick(/address|street|location|description|name/i);
+  return addr?`${num} · ${addr}`:num;
+}
+
+/* ---------- loading ---------- */
+let done=0,total=0;
+function status(msg,err){const s=$('#status');s.textContent=msg;s.className=err?'err':''}
+function progress(){const b=$('#bar');b.style.display=total?'block':'none';b.firstElementChild.style.width=(total?Math.round(done/total*100):0)+'%'}
+
+async function login(){
+  S.base=$('#base').value.trim();S.appId=$('#appid').value.trim();S.deviceId=$('#dev').value.trim();
+  const tok=$('#tok').value.trim();
+  if(tok){S.token=tok;return}
+  const email=$('#email').value.trim(),pw=$('#pw').value;
+  if(!email||!pw)throw new Error('Enter email and password, or an access token under Advanced.');
+  S.token='';
+  status('Signing in…');
+  const j=await api('/v1/consumer/login','login',{method:'POST',body:{email,pw,deviceId:S.deviceId}});
+  const t=typeof j==='string'?j:(j.token||j.accessToken||j.access_token||(j.data&&(j.data.token||j.data.accessToken)));
+  if(!t)throw new Error('Signed in, but the response had no token. See the API responses section.');
+  S.token=t;
+}
+
+async function probeStart(id){
+  const today=new Date();
+  try{
+    const pos=extract(await api(`/v1/consumption/monthly/${id}/2010-01-01/${ymd(today)}`,'monthly')).filter(r=>r.v>0).map(r=>r.lit).sort((a,b)=>a-b);
+    if(pos.length)return new Date(pos[0].getFullYear(),pos[0].getMonth(),1);
+  }catch(e){if(e.fatal)throw e}
+  let earliest=null,empty=0;
+  for(let i=0;i<15;i++){
+    const to=addDays(today,-365*i),from=addDays(to,-364);let pos=[];
+    try{pos=extract(await api(`/v1/consumption/daily/${id}/${ymd(from)}/${ymd(to)}`,'daily')).filter(r=>r.v>0)}catch(e){if(e.fatal)throw e;break}
+    if(pos.length){earliest=pos.map(r=>r.lit).sort((a,b)=>a-b)[0];empty=0}
+    else if(earliest||++empty>=2)break;
+  }
+  return earliest?new Date(earliest.getFullYear(),earliest.getMonth(),1):null;
+}
+
+async function getChunk(kind,id,s,e){
+  try{return extract(await api(`/v1/consumption/${kind}/${id}/${ymd(s)}/${ymd(e)}`,kind))}
+  catch(err){
+    const days=Math.round((e-s)/864e5);
+    if(!err.fatal&&days>=2){const mid=addDays(s,Math.floor(days/2));return[...await getChunk(kind,id,s,mid),...await getChunk(kind,id,addDays(mid,1),e)]}
+    throw err;
+  }
+}
+async function fetchRange(kind,id,from,to,chunk,onRecs,fails){
+  const tasks=[];for(let s=new Date(from);s<=to;s=addDays(s,chunk))tasks.push([s,new Date(Math.min(addDays(s,chunk-1),to))]);
+  total+=tasks.length;progress();
+  await pool(tasks,4,async([s,e])=>{
+    try{onRecs(await getChunk(kind,id,s,e))}catch(err){if(err.fatal)throw err;fails.push(`${kind} ${ymd(s)}…${ymd(e)}: ${err.message}`)}
+    done++;progress();status(`Fetching ${kind} data… ${done}/${total}`);
+  });
+}
+
+async function loadMeter(m){
+  status(`Finding when meter ${m.id} began reporting…`);
+  let start=await probeStart(m.id);
+  if(!start)start=addDays(midnight(),-365);
+  const today=midnight(),fails=[];
+  m.hourly=new Map();m.daily=new Map();
+  await fetchRange('daily',m.id,start,today,92,recs=>recs.forEach(r=>m.daily.set(ymd(r.lit),r.v)),fails);
+  await fetchRange('hourly',m.id,start,today,31,recs=>recs.forEach(r=>{const d=r.abs;m.hourly.set(`${ymd(d)} ${pad(d.getHours())}`,r.v)}),fails);
+  // fill/derive daily from hourly where the daily endpoint gave nothing
+  const hs=new Map();for(const[k,v]of m.hourly){const d=k.slice(0,10);hs.set(d,(hs.get(d)||0)+v)}
+  for(const[d,v]of hs)if(!m.daily.has(d))m.daily.set(d,v);
+  const pos=[...m.daily].filter(([,v])=>v>0).map(([d])=>d).sort();
+  const posH=[...m.hourly].filter(([,v])=>v>0).map(([k])=>k).sort();
+  m.firstDay=parseYmd(pos[0]||(posH[0]||ymd(start)).slice(0,10));
+  m.lastHour=posH.length?posH[posH.length-1]:([...m.hourly.keys()].sort().pop()||null);
+  m.fails=fails;
+  m.sel=null;m.wgran='day';
+}
+
+async function run(){
+  const btn=$('#go');btn.disabled=true;$('#help').style.display='none';
+  RAW={};SAMPLE={};METERS=[];done=0;total=0;
+  try{
+    await login();
+    store.set('wm-email',$('#email').value.trim());
+    status('Loading account…');
+    const side=[['me','/v1/consumer/me'],['meters','/v1/consumer/meters'],['lastRead','/v1/consumption/last-read'],['alerts','/v1/consumer/myalerts'],['forecast','/v1/consumption/forecast'],['vacations','/v1/consumer/vacations'],['lowRate','/v1/consumption/Low-Rate-Limit']];
+    await Promise.all(side.map(async([k,p])=>{try{RAW[k]=await api(p,k)}catch(e){if(e.fatal)throw e;RAW[k]={__error:e.message}}}));
+    let arr=findArray(RAW.meters)||[];
+    let list=arr.map(o=>({id:meterId(o),info:o})).filter(x=>x.id);
+    if(!list.length){const ids=new Set();(findArray(RAW.lastRead)||[]).forEach(o=>{const id=meterId(o);if(id)ids.add(id)});list=[...ids].map(id=>({id,info:{}}))}
+    if(!list.length)throw new Error('No meters found in the account. Check the API responses section below.');
+    const seen=new Set();list=list.filter(x=>!seen.has(x.id)&&seen.add(x.id));
+    for(const x of list){const m={id:x.id,info:x.info,name:meterName(x.info,x.id)};await loadMeter(m);METERS.push(m)}
+    for(const m of METERS)try{m.forecast=await api(`/v1/consumption/forecast/${m.id}`,'forecastMeter')}catch(e){if(e.fatal)throw e}
+    status('');total=0;progress();
+    CUR=0;showApp();
+  }catch(e){
+    status(e.message,true);
+    if(e.cors)$('#help').style.display='block';
+    renderDebug();
+  }finally{btn.disabled=false}
+}
+
+/* ---------- generic rendering of account data ---------- */
+function renderAny(v,dep=0){
+  if(v==null||v==='')return'<span class="mute">—</span>';
+  if(Array.isArray(v)){
+    if(!v.length)return'<span class="mute">None</span>';
+    if(v.every(x=>x&&typeof x==='object'&&!Array.isArray(x))){
+      const cols=[...new Set(v.flatMap(o=>Object.keys(o)))];
+      return`<div class="tbl"><table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${v.slice(0,60).map(o=>`<tr>${cols.map(c=>`<td>${o[c]!=null&&typeof o[c]==='object'?esc(JSON.stringify(o[c])):esc(o[c]??'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    }
+    return esc(v.map(x=>typeof x==='object'?JSON.stringify(x):x).join(', '));
+  }
+  if(typeof v==='object'){
+    if(v.__error)return`<span style="color:var(--err)">${esc(v.__error)}</span>`;
+    const ks=Object.keys(v);if(!ks.length)return'<span class="mute">None</span>';
+    if(dep>2)return esc(JSON.stringify(v));
+    return`<dl class="kv">${ks.map(k=>`<dt>${esc(k)}</dt><dd>${renderAny(v[k],dep+1)}</dd>`).join('')}</dl>`;
+  }
+  if(typeof v==='boolean')return v?'Yes':'No';
+  return esc(v);
+}
+function renderAccount(){
+  const blocks=[['Account','me'],['Meters','meters'],['Last read','lastRead'],['Active alerts','alerts'],['Forecast','forecast'],['Vacations','vacations'],['Low rate limit','lowRate']];
+  $('#acct').innerHTML=blocks.filter(([,k])=>k in RAW).map(([t,k])=>`<div class="blk"><h3>${t}</h3>${renderAny(RAW[k])}</div>`).join('');
+}
+function renderDebug(){
+  $('#dbg').innerHTML=Object.entries(SAMPLE).map(([k,s])=>`<h3>${esc(k)} <span class="mute">${esc(s.path)} → ${s.status}</span></h3><pre>${esc(JSON.stringify(s.body,(kk,vv)=>/token|pw|password/i.test(kk)?'***':vv,2).slice(0,6000))}</pre>`).join('');
+}
+
+/* ---------- periods ---------- */
+function periods(m){
+  const today=midnight(),first=m.firstDay;
+  const day=[],week=[],month=[];
+  let i=0;
+  for(let d=new Date(first);d<=today;d=addDays(d,1),i++){const s=ymd(d);
+    day.push({id:s,i,dow:d.getDay(),label:`${DOW[d.getDay()]} ${dShort(d)}`,total:m.daily.get(s)??null,partial:+d===+today})}
+  i=0;
+  for(let w=sow(first);w<=today;w=addDays(w,7),i++){const e=addDays(w,6);
+    const t=sum(Array.from({length:7},(_,k)=>m.daily.get(ymd(addDays(w,k)))??null));
+    week.push({id:ymd(w),i,label:`${pad(w.getDate())}/${pad(w.getMonth()+1)} – ${dShort(e)}`,total:t,partial:w<first||e>today||+e===+today})}
+  i=0;
+  for(let mo=new Date(first.getFullYear(),first.getMonth(),1);mo<=today;mo=new Date(mo.getFullYear(),mo.getMonth()+1,1),i++){
+    const n=new Date(mo.getFullYear(),mo.getMonth()+1,0).getDate();
+    const t=sum(Array.from({length:n},(_,k)=>m.daily.get(ymd(new Date(mo.getFullYear(),mo.getMonth(),k+1)))??null));
+    const last=new Date(mo.getFullYear(),mo.getMonth(),n);
+    month.push({id:ymd(mo).slice(0,7),i,label:`${MON[mo.getMonth()]} ${mo.getFullYear()}`,total:t,partial:mo<first||last>=today})}
+  return{day,week,month};
+}
+function series(m,key,id){
+  if(key==='day')return Array.from({length:24},(_,h)=>m.hourly.get(`${id} ${pad(h)}`)??null);
+  if(key==='week'){const w=parseYmd(id);
+    if(m.wgran==='hour')return Array.from({length:168},(_,k)=>m.hourly.get(`${ymd(addDays(w,Math.floor(k/24)))} ${pad(k%24)}`)??null);
+    return Array.from({length:7},(_,k)=>m.daily.get(ymd(addDays(w,k)))??null)}
+  const[y,mo]=id.split('-').map(Number);const n=new Date(y,mo,0).getDate();
+  return Array.from({length:31},(_,k)=>k<n?(m.daily.get(ymd(new Date(y,mo-1,k+1)))??null):null);
+}
+function xLabels(m,key,ref){
+  if(key==='day')return Array.from({length:24},(_,h)=>`${pad(h)}:00`);
+  if(key==='week')return m.wgran==='hour'?Array.from({length:168},(_,k)=>`${DOW[Math.floor(k/24)]} ${pad(k%24)}:00`):DOW.slice();
+  // month: weekdays taken from the reference month (newest selected); Sundays get a "Sun" line
+  const[y,mo]=(ref||ymd(new Date()).slice(0,7)).split('-').map(Number);
+  return Array.from({length:31},(_,k)=>{const d=new Date(y,mo-1,k+1);return d.getMonth()===mo-1&&d.getDay()===0?[String(k+1),'Sun']:String(k+1)});
+}
+const isSunLabel=l=>Array.isArray(l)&&l[1]==='Sun';
+
+const SECDEF={
+  day:{title:'Day over day',sub:'Each line is one day, by hour.',amt:'Consumption per hour',cum:'Running total through the day',
+       presets:[['Last 7',p=>p.slice(-7)],['Last 14',p=>p.slice(-14)],['Last 30',p=>p.slice(-30)],['None',()=>[]]],def:7},
+  week:{title:'Week over week',sub:'Each line is one Sunday–Saturday week.',amt:'Consumption per',cum:'Running total through the week',
+       presets:[['Last 4',p=>p.slice(-4)],['Last 8',p=>p.slice(-8)],['Last 13',p=>p.slice(-13)],['All',p=>p],['None',()=>[]]],def:4},
+  month:{title:'Month over month',sub:'Each line is one calendar month, by day.',amt:'Consumption per day',cum:'Running total through the month',
+       presets:[['Last 3',p=>p.slice(-3)],['Last 6',p=>p.slice(-6)],['Last 12',p=>p.slice(-12)],['All',p=>p],['None',()=>[]]],def:3}
+};
+
+function buildSections(){
+  $('#sections').innerHTML=Object.entries(SECDEF).map(([k,d])=>`
+  <section class="res panel" id="sec-${k}">
+    <div class="res-head">
+      <div><h2>${d.title}</h2><p class="mute">${d.sub}</p></div>
+      ${k==='week'?`<div class="seg" role="group" aria-label="Week resolution"><button data-g="day">By day</button><button data-g="hour">By hour</button></div>`:''}
+    </div>
+    <div class="res-body">
+      <aside class="picker">
+        <div class="presets">${d.presets.map(([n],i)=>`<button data-p="${i}">${n}</button>`).join('')}</div>
+        ${k==='day'?`<div class="dows">${DOW.map((n,i)=>`<button data-w="${i}">${n}</button>`).join('')}</div>`:''}
+        <div class="list"></div>
+      </aside>
+      <div class="charts">
+        <figure><figcaption class="cap-amt"></figcaption><div class="cv"><canvas class="c-amt"></canvas></div></figure>
+        <figure><figcaption class="cap-cum">${d.cum} (m³)</figcaption><div class="cv"><canvas class="c-cum"></canvas></div></figure>
+      </div>
+    </div>
+  </section>`).join('');
+  for(const k of Object.keys(SECDEF)){
+    const sec=$(`#sec-${k}`);
+    sec.querySelector('.presets').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const m=METERS[CUR],P=m.P[k];m.sel[k]=new Set(SECDEF[k].presets[+b.dataset.p][1](P).map(p=>p.id));renderList(k);draw(k)});
+    if(k==='day')sec.querySelector('.dows').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const m=METERS[CUR];m.sel.day=new Set(m.P.day.filter(p=>p.dow===+b.dataset.w).slice(-8).map(p=>p.id));renderList('day');draw('day')});
+    if(k==='week')sec.querySelector('.seg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;METERS[CUR].wgran=b.dataset.g;draw('week')});
+    sec.querySelector('.list').addEventListener('change',e=>{const c=e.target;if(!c.dataset.id)return;const s=METERS[CUR].sel[k];c.checked?s.add(c.dataset.id):s.delete(c.dataset.id);draw(k)});
+  }
+}
+
+function renderList(k){
+  const m=METERS[CUR],P=m.P[k],sel=m.sel[k];
+  $(`#sec-${k} .list`).innerHTML=P.slice().reverse().map(p=>`<label class="pi${p.partial?' part':''}"><input type="checkbox" data-id="${p.id}"${sel.has(p.id)?' checked':''}><span class="sw" style="--c:${PAL[p.i%PAL.length]}"></span><span class="pl">${esc(p.label)}</span><span class="pt">${fmt(p.total,2)}</span></label>`).join('')||'<div class="empty">No data</div>';
+}
+
+function chartOpts(k,m,isCum){
+  const mute=cssv('--mute'),line=cssv('--line');
+  const hourWeek=k==='week'&&m.wgran==='hour';
+  return{animation:false,responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{itemSort:(a,b)=>(b.raw??-1)-(a.raw??-1),filter:i=>i.raw!=null,
+      callbacks:{title:it=>k==='month'&&it.length?`Day ${it[0].dataIndex+1}`:undefined,
+        label:c=>{let w='';if(k==='month'&&c.dataset.pid){const[y,mo]=c.dataset.pid.split('-').map(Number);w=` ${DOW[new Date(y,mo-1,c.dataIndex+1).getDay()]}`}
+          return ` ${c.dataset.label}${w}: ${fmtU(c.raw)}`}}}},
+    scales:{x:{grid:{color:k==='month'?(c=>isSunLabel(c.chart.data.labels[c.index])?mute:line):line,lineWidth:k==='month'?(c=>isSunLabel(c.chart.data.labels[c.index])?1.2:1):1},
+      ticks:{color:mute,maxRotation:0,autoSkip:!hourWeek&&k!=='month',font:k==='month'?(c=>({weight:c.tick&&isSunLabel(c.tick.label)?'700':'400'})):undefined,
+        callback:function(v,i){return hourWeek?(i%24===0?DOW[i/24]:''):this.getLabelForValue(v)}}},
+      y:{beginAtZero:true,grid:{color:line},ticks:{color:mute},title:{display:true,text:'m³',color:mute}}},
+    elements:{point:{radius:(hourWeek||k==='day')?0:2,hoverRadius:4},line:{tension:isCum?0:.25}},spanGaps:false};
+}
+
+function newestMonthLabel(m){const c=m.P.month.filter(p=>m.sel.month.has(p.id));return c.length?c[c.length-1].label:null}
+function draw(k){
+  const m=METERS[CUR],P=m.P[k],sel=m.sel[k];
+  const sec=$(`#sec-${k}`);
+  if(k==='week')sec.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===m.wgran)));
+  sec.querySelector('.cap-amt').textContent=k==='week'?`Consumption per ${m.wgran==='hour'?'hour':'day'} (m³)`:`${SECDEF[k].amt} (m³)`;
+  if(k==='month'){const r=newestMonthLabel(m);if(r){sec.querySelector('.cap-amt').textContent+=` · Sundays as in ${r}`;sec.querySelector('.cap-cum').textContent=`${SECDEF.month.cum} (m³) · Sundays as in ${r}`}}
+  const chosen=P.filter(p=>sel.has(p.id));
+  const newest=chosen.length?chosen[chosen.length-1].id:null;
+  const labels=xLabels(m,k,newest);
+  for(const kind of['amt','cum']){
+    const ds=chosen.map(p=>{let d=series(m,k,p.id);if(kind==='cum')d=cumulate(d);const c=PAL[p.i%PAL.length];
+      return{label:p.label,pid:p.id,data:d,borderColor:c,backgroundColor:c,borderWidth:p.id===newest?2.6:1.5,borderDash:p.partial?[5,4]:[],pointBackgroundColor:c}});
+    const id=`${k}-${kind}`;
+    if(CHARTS[id])CHARTS[id].destroy();
+    CHARTS[id]=new Chart(sec.querySelector(`.c-${kind}`),{type:'line',data:{labels,datasets:ds},options:chartOpts(k,m,kind==='cum')});
+  }
+}
+
+function odometer(v){
+  const t=Math.max(0,v||0);const int=Math.floor(t),dec=Math.round((t-int)*1000);
+  const iStr=String(int).padStart(5,'0'),dStr=String(dec===1000?999:dec).padStart(3,'0');
+  $('#digits').innerHTML=[...iStr].map(c=>`<b>${c}</b>`).join('')+'<span class="sep"></span>'+[...dStr].map(c=>`<b class="r">${c}</b>`).join('');
+}
+
+function renderMeter(){
+  const m=METERS[CUR];
+  $('#tabs').innerHTML=METERS.length>1?METERS.map((x,i)=>`<button role="tab" aria-selected="${i===CUR}" data-i="${i}">${esc(x.name)}</button>`).join(''):'';
+  m.P=periods(m);
+  if(!m.sel)m.sel={day:new Set(m.P.day.slice(-7).map(p=>p.id)),week:new Set(m.P.week.slice(-4).map(p=>p.id)),month:new Set(m.P.month.slice(-3).map(p=>p.id))};
+  const today=midnight();
+  let all=0;for(const[d,v]of m.daily)if(parseYmd(d)>=m.firstDay&&parseYmd(d)<=today)all+=v;
+  odometer(all);
+  const days=Math.round((today-m.firstDay)/864e5)+1;
+  const last7=sum(Array.from({length:7},(_,k)=>m.daily.get(ymd(addDays(today,-k)))??null));
+  const ms=new Date(today.getFullYear(),today.getMonth(),1);
+  const thisMonth=sum(Array.from({length:today.getDate()},(_,k)=>m.daily.get(ymd(addDays(ms,k)))??null));
+  const wk=sum(Array.from({length:today.getDay()+1},(_,k)=>m.daily.get(ymd(addDays(sow(today),k)))??null));
+  const lh=m.lastHour?parseYmd(m.lastHour.slice(0,10)):null;
+  $('#kpis').innerHTML=[
+    ['Reporting since',`${m.firstDay.getDate()} ${MON[m.firstDay.getMonth()]} ${m.firstDay.getFullYear()}`,`${days} days`],
+    ['This week (from Sun)',fmt(wk),'m³'],
+    ['Last 7 days',fmt(last7),'m³'],
+    ['This month',fmt(thisMonth),'m³'],
+    ['Daily average',fmt(all/days),'m³'],
+    ['Latest hourly reading',lh?`${dShort(lh)} ${m.lastHour.slice(11)}:00`:'—',''],
+  ].map(([a,b,c])=>`<div class="kpi"><span>${a}</span><strong>${b}</strong><em>${c}</em></div>`).join('')+
+  (m.fails.length?`<div class="kpi" style="grid-column:1/-1"><span style="color:var(--err)">${m.fails.length} request(s) failed, so some ranges may be missing. Details in the API responses section.</span></div>`:'');
+  for(const k of Object.keys(SECDEF)){renderList(k);draw(k)}
+}
+
+function showApp(){
+  $('#login').style.display='none';$('#app').style.display='block';
+  renderAccount();renderDebug();
+  const extra=METERS.flatMap(m=>m.fails.map(f=>`<li>${esc(m.id)}: ${esc(f)}</li>`));
+  if(extra.length)$('#dbg').insertAdjacentHTML('afterbegin',`<h3>Failed requests</h3><ul>${extra.join('')}</ul>`);
+  if(!$('#sec-day'))buildSections();
+  renderMeter();
+}
+
+/* ---------- events ---------- */
+$('#lf').addEventListener('submit',e=>{e.preventDefault();run()});
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=+b.dataset.i;renderMeter()});
+$('#reload').addEventListener('click',()=>{$('#app').style.display='none';$('#login').style.display='block';run()});
+$('#out').addEventListener('click',()=>{S.token='';$('#pw').value='';$('#tok').value='';$('#app').style.display='none';$('#login').style.display='block';status('')});
+$('#dl').addEventListener('click',()=>{
+  const data={exportedAt:new Date().toISOString(),account:RAW,meters:METERS.map(m=>({id:m.id,name:m.name,firstDay:ymd(m.firstDay),daily:Object.fromEntries([...m.daily].sort()),hourly:Object.fromEntries([...m.hourly].sort()),forecast:m.forecast}))};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'}));a.download=`water_${ymd(new Date())}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(METERS.length)renderMeter()});
+const em=store.get('wm-email');if(em)$('#email').value=em;
+</script>
+</body>
+</html>
